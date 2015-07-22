@@ -239,8 +239,9 @@ public class Viterbi {
 	
 
 
-	public void doViterbi() {
+	public  void doViterbi() {
 		WSKF = Math.log(wuerfelEmissionFair.get(zahlenfolge.get(0)) * q0Fair);
+		//System.out.println(zahlenfolge.get(0));
 		fairWSKStack.addFirst(WSKF);
 		
 		WSKU = Math.log(wuerfelEmissionUnfair.get(zahlenfolge.get(0)) * q0Unfair);
