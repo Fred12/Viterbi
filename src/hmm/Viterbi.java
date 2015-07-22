@@ -10,39 +10,42 @@ import java.text.ParseException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Locale;
 import java.util.Scanner;
 
 public class Viterbi {
-	Scanner scanner = new Scanner(System.in); 
-	double q0Fair;  //WSK, im Anfangszustand den fairen Wuerfel zu waehlen
-	double q0Unfair;  //WSK, im Anfangszustand den unfairen Wuerfel zu waehlen
+	private Scanner scanner = new Scanner(System.in); 
+	private double q0Fair;  //WSK, im Anfangszustand den fairen Wuerfel zu waehlen
+	private double q0Unfair;  //WSK, im Anfangszustand den unfairen Wuerfel zu waehlen
 	
-	double FF;   //WSK des Wechsels von fairem zu fairem Wuerfel
-	double FU;	 //WSK des Wechsels von fairem zu unfairem Wuerfel
-	double UU;	 //WSK des Wechsels von unfairem zu unfairem Wuerfel
-	double UF;	 //WSK des Wechsels von unfairem zu fairem Wuerfel
+	private double FF;   //WSK des Wechsels von fairem zu fairem Wuerfel
+	private double FU;	 //WSK des Wechsels von fairem zu unfairem Wuerfel
+	private double UU;	 //WSK des Wechsels von unfairem zu unfairem Wuerfel
+	private double UF;	 //WSK des Wechsels von unfairem zu fairem Wuerfel
 	
-	double WSKU; //berechnete ÜbergangsWSK für unfair
-	double WSKF; //berechnete ÜbergangsWSK für fair
+	private double WSKU; //berechnete ÜbergangsWSK für unfair
+	private double WSKF; //berechnete ÜbergangsWSK für fair
 	
-	ArrayList<Double> wuerfelEmissionFair = new ArrayList();
-	ArrayList<Double> wuerfelEmissionUnfair = new ArrayList();
+	private ArrayList<Double> wuerfelEmissionFair = new ArrayList();
+	private ArrayList<Double> wuerfelEmissionUnfair = new ArrayList();
+	private Deque<Double> fairWSKStack = new ArrayDeque<Double>();
+	private Deque<Double> unfairWSKStack = new ArrayDeque<Double>();
+	private ArrayList<Integer> zahlenfolge = new ArrayList();
 
-	double e;
-	String zeile = "";
-	File source;
-	int zahlenwert;
-	int i = 0;
-	boolean userInput = false;
-	ArrayList<String> dicevalues; 
-	ArrayList<Double> dicevalues2 = new ArrayList<Double>();
-	int counter = 0;
-	boolean abort = false;	
+	private double e;
+	private String zeile = "";
+	private File source;
+	private int zahlenwert;
+	private int i = 0;
+	private boolean userInput = false;
+	private ArrayList<String> dicevalues; 
+	private ArrayList<Double> dicevalues2 = new ArrayList<Double>();
+	private int counter = 0;
+	private boolean abort = false;	
 
-	Deque<Double> fairWSKStack = new ArrayDeque<Double>();
-	Deque<Double> unfairWSKStack = new ArrayDeque<Double>();
+	
 	
 	//*********************************************************************************************************
 	//*********************************************************************************************************
@@ -56,6 +59,8 @@ public class Viterbi {
 	public Viterbi() throws IOException, ParseException {		
 		begruessen();
 		readData();
+		chooseAlgorithm();
+	
 	}
 	
 	public void begruessen() throws IOException, ParseException {
@@ -204,61 +209,102 @@ public class Viterbi {
 		
 		for (char c : zeile.toCharArray()) {
 	        if (Character.isDigit(c)) {
-	            zahlenwert = Character.getNumericValue(c);			            
-	            doViterbi(zahlenwert);
+	            zahlenwert = Character.getNumericValue(c);
+	            zahlenfolge.add(zahlenwert);	            
 	        }	
 	    }
  
 	}
 	
 	}
+	
+	public void chooseAlgorithm() {
+		System.out.println("Welcher Algorithmus soll durchgeführt werden?");
+		System.out.println("(1) : Viterbi");
+		System.out.println("(2) : Vorwaerts");
+		System.out.println("(sonst) : abbrechen");
+		
+		int input = scanner.nextInt();
+		
+		if (input == 1) {
+			doViterbi();
+		}
+		else if (input == 2) {
+			
+		}
+		else {
+			return;
+		}
+	}
+	
 
 
-	public void doViterbi(int zahl) {
-		doUnfair(zahl);
-		doFair(zahl);
-		compareStacks();		
+	public void doViterbi() {
+		WSKF = Math.log(wuerfelEmissionFair.get(zahlenfolge.get(0)) * q0Fair);
+		fairWSKStack.addFirst(WSKF);
+		
+		WSKU = Math.log(wuerfelEmissionUnfair.get(zahlenfolge.get(0)) * q0Unfair);
+		unfairWSKStack.addFirst(WSKU);
+		
+		for (int zahl : zahlenfolge) {
+			doFair(zahl);
+			doUnfair(zahl);
+			compareStacks();
+		}
+				
 	}
 
 
 	//Bei dieser Methode gehen wir von einem Wurf mit einem fairen Wuerfel aus  
 	private void doFair(int zahl) {
+		/*
 		if (fairWSKStack.isEmpty()) {
-			WSKF =(wuerfelEmissionFair.get(zahl-1) * q0Fair) ;
+			WSKF =(wuerfelEmissionFair.get((zahl-1)) * q0Fair) ;
 			fairWSKStack.push(WSKF);
 		}
+		
 		else {	
+		*/
 			//Fälle betrachten: Emissionszahl des fairen Wuerfels * maximum von vorangegangener WSK Fair zu nochmal Fair
 			//und vorangegangener WSK Unfair zu diesmal Fair
-			WSKF = wuerfelEmissionFair.get(zahl-1) * Math.max(fairWSKStack.getFirst() * FF, unfairWSKStack.getFirst() * UF) * 10;
+			WSKF = Math.log(wuerfelEmissionFair.get((zahl-1))) + Math.max(fairWSKStack.peekFirst() + Math.log(FF), unfairWSKStack.peekFirst() + Math.log(UF));
 			//System.out.println(WSKF);
-			fairWSKStack.push(WSKF);
-		}
+			fairWSKStack.addFirst(WSKF);
+		//}
 		
 	}
 
 	//Bei dieser Methode gehen wir von einem Wurf mit einem unfairen Wuerfel aus 
-	private void doUnfair(int zahl) {		
+	private void doUnfair(int zahl) {	
+		/*
 		if (unfairWSKStack.isEmpty()) {
-			WSKU = q0Unfair * wuerfelEmissionUnfair.get(zahl-1);
+			WSKU = q0Unfair * wuerfelEmissionUnfair.get((zahl-1));
 			unfairWSKStack.push(WSKU);
 		}
-		else {	
+		
+		else {
+		*/	
 			//Fälle betrachten: Emissionszahl des unfairen Wuerfels * maximum von vorangegangener WSK Unfair zu nochmal Unfair
 			//und vorangegangener WSK Fair zu diesmal unfair
-			WSKU = wuerfelEmissionUnfair.get(zahl-1) * Math.max(unfairWSKStack.getFirst() * UU, fairWSKStack.getFirst() * FU) *10;
+			WSKU = Math.log(wuerfelEmissionUnfair.get((zahl-1))) + Math.max(unfairWSKStack.peekFirst() + Math.log(UU), fairWSKStack.peekFirst() + Math.log(FU));
 			//System.out.println(WSKF);			
-			unfairWSKStack.push(WSKU);
-		}
+			unfairWSKStack.addFirst(WSKU);
+		//}
 		
 	}
 	
 	private void compareStacks() {
 	
-	if (fairWSKStack.getFirst() > unfairWSKStack.getFirst())
+	if (fairWSKStack.peekFirst() > unfairWSKStack.peekFirst())
 		System.out.print("F");
 	else
-		System.out.print("L");		
+		System.out.print("U");		
+	
+	}
+	
+	private void doVorwaerts() {
+		
+		
 	}
 
 }
