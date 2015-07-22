@@ -33,7 +33,8 @@ public class ReadData {
 			
 			for (char c : zeile.toCharArray()) {
 		        if (Character.isDigit(c)) {
-		            zahl = Character.getNumericValue(c);
+		            zahl = Character.getNumericValue(c);			            
+		            
 		        }	
 		    }
 	 
