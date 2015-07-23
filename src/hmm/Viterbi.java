@@ -1,18 +1,14 @@
 package hmm;
 
+import java.awt.List;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Deque;
-import java.util.Locale;
 import java.util.Scanner;
 
 public class Viterbi {
@@ -28,21 +24,22 @@ public class Viterbi {
 	private double WSKU; //berechnete ÜbergangsWSK für unfair
 	private double WSKF; //berechnete ÜbergangsWSK für fair
 	
-	private ArrayList<Double> wuerfelEmissionFair = new ArrayList();
-	private ArrayList<Double> wuerfelEmissionUnfair = new ArrayList();
-	private Deque<Double> fairWSKStack = new ArrayDeque<Double>();
-	private Deque<Double> unfairWSKStack = new ArrayDeque<Double>();
-	private ArrayList<Integer> zahlenfolge = new ArrayList();
+	private ArrayList<Double> wuerfelEmissionFair = new ArrayList<Double>();
+	private ArrayList<Double> wuerfelEmissionUnfair = new ArrayList<Double>();
+	private ArrayList<Double> fairWSKStack = new ArrayList<Double>();
+	private ArrayList<Double> unfairWSKStack = new ArrayList<Double>();
+	private ArrayList<Integer> zahlenfolge = new ArrayList<Integer>();
+	ArrayList<Double> konfdatei = new ArrayList<Double>();
+	
+	private ArrayList<Double> fairVWTS = new ArrayList<Double>();
+	private ArrayList<Double> unfairVWTS = new ArrayList<Double>();
 
 	private double e;
 	private String zeile = "";
 	private File source;
 	private int zahlenwert;
-	private int i = 0;
 	private boolean userInput = false;
-	private ArrayList<String> dicevalues; 
-	private ArrayList<Double> dicevalues2 = new ArrayList<Double>();
-	private int counter = 0;
+	//private ArrayList<String> dicevalues; 
 	private boolean abort = false;	
 
 	
@@ -53,6 +50,15 @@ public class Viterbi {
 	 
 	public static void main(String[] args) throws IOException, ParseException {		
 		new Viterbi();
+		/*ArrayList<Double> dd = new ArrayList<Double>();
+		dd.add(20.0);
+		dd.add(40.0);
+		dd.add(30.0);
+		dd.add(50.0);
+		System.out.println(dd);
+		System.out.println(dd.get(dd.size()-1));
+		System.out.println(dd.get(dd.size()-2));
+		*/
 	}
 	
 	
@@ -99,7 +105,7 @@ public class Viterbi {
 	}
 	
 	public void userInputHand() {			
-		System.out.println("Bitte geben Sie die Übergangswahrscheinlichkeit (reelle Zahl, bzw. Double-Wert) an aus dem Anfangszustands den fairen Wuerfel auszuwählen: ");
+		System.out.println("Bitte geben Sie die Übergangswahrscheinlichkeit (reelle Kommazahl, bzw. Double-Wert) an aus dem Anfangszustands den fairen Wuerfel auszuwählen: ");
 		q0Fair = scanner.nextDouble();
 		System.out.println("Analog dazu bitte die Wahrscheinlichkeit angeben, aus dem Anfangszustand den Unfairen Würfel zu wählen: ");
 		q0Unfair = scanner.nextDouble();
@@ -145,34 +151,46 @@ public class Viterbi {
 		
 		String dateiname = scanner.next();
 		source = new File(dateiname);
-		FileReader fr = new FileReader(source);		
-		BufferedReader br = new BufferedReader(fr);
-		NumberFormat format = NumberFormat.getInstance(Locale.GERMAN);
 		
+		Scanner in = new Scanner(source);
+		double val;
+		
+		while(in.hasNextDouble()) {
+			val = in.nextDouble();
+			//System.out.println(val);
+			konfdatei.add(val);			
+		}
+		in.close();
+		//NumberFormat format = NumberFormat.getInstance(Locale.GERMAN);
+		
+		/*
 		while( (zeile = br.readLine()) != null ) {			
 			dicevalues = new ArrayList<String>(Arrays.asList(zeile.split("\\s+")));
 			for (String element : dicevalues) {				  
 				Number number = format.parse(element);
 				double d = number.doubleValue();
-				dicevalues2.add(d);
+				konfdatei.add(d);
 			}
 			
 		}
-		for (Double element : dicevalues2) {
+		for (Double element : konfdatei) {
 			System.out.println(element);
 		}
+		*/
 		
-		q0Fair = dicevalues2.get(0);
-		q0Unfair = dicevalues2.get(1);
-		FF = dicevalues2.get(2);		
-		FU = dicevalues2.get(3);		
-		UU = dicevalues2.get(4);
-		UF = dicevalues2.get(5);
+		q0Fair = konfdatei.get(0);
+		q0Unfair = konfdatei.get(1);
+		FF = konfdatei.get(2);		
+		FU = konfdatei.get(3);		
+		UU = konfdatei.get(4);
+		UF = konfdatei.get(5);
 		for (int t = 6 ; t <=11; t++) {
-			wuerfelEmissionFair.add(dicevalues2.get(t));			
+			wuerfelEmissionFair.add(konfdatei.get(t));	
+			//System.out.println(wuerfelEmissionFair.get(t-6));
 		}
 		for (int t = 12 ; t <=17; t++) {
-			wuerfelEmissionUnfair.add(dicevalues2.get(t));			
+			wuerfelEmissionUnfair.add(konfdatei.get(t));
+			//System.out.println(wuerfelEmissionUnfair.get(t-12));
 		}
 		/*
 		for (double element : wuerfelEmissionFair) {
@@ -214,7 +232,7 @@ public class Viterbi {
 	        }	
 	    }
  
-	}
+	}br.close();
 	
 	}
 	
@@ -230,7 +248,7 @@ public class Viterbi {
 			doViterbi();
 		}
 		else if (input == 2) {
-			
+			doVorwaertsWSK();
 		}
 		else {
 			return;
@@ -240,14 +258,21 @@ public class Viterbi {
 
 
 	public  void doViterbi() {
+		//System.out.println("Zahl: "+zahlenfolge.get(0));
 		WSKF = Math.log(wuerfelEmissionFair.get(zahlenfolge.get(0)) * q0Fair);
 		//System.out.println(zahlenfolge.get(0));
-		fairWSKStack.addFirst(WSKF);
+		//System.out.println("Fair: " +WSKF);
+		fairWSKStack.add(WSKF);
 		
 		WSKU = Math.log(wuerfelEmissionUnfair.get(zahlenfolge.get(0)) * q0Unfair);
-		unfairWSKStack.addFirst(WSKU);
+		//System.out.println("Unfair: " +WSKU);
+		unfairWSKStack.add(WSKU);
+		compareStacks();
 		
-		for (int zahl : zahlenfolge) {
+		
+		for (int zahl : zahlenfolge.subList(1, zahlenfolge.size())) {  //skip first element in iteration
+			//if (zahl == zahlenfolge.get(0)) continue;
+			//System.out.println("Zahl: "+ zahl);
 			doFair(zahl);
 			doUnfair(zahl);
 			compareStacks();
@@ -257,7 +282,7 @@ public class Viterbi {
 
 
 	//Bei dieser Methode gehen wir von einem Wurf mit einem fairen Wuerfel aus  
-	private void doFair(int zahl) {
+	public void doFair(int zahl) {
 		/*
 		if (fairWSKStack.isEmpty()) {
 			WSKF =(wuerfelEmissionFair.get((zahl-1)) * q0Fair) ;
@@ -268,15 +293,19 @@ public class Viterbi {
 		*/
 			//Fälle betrachten: Emissionszahl des fairen Wuerfels * maximum von vorangegangener WSK Fair zu nochmal Fair
 			//und vorangegangener WSK Unfair zu diesmal Fair
-			WSKF = Math.log(wuerfelEmissionFair.get((zahl-1))) + Math.max(fairWSKStack.peekFirst() + Math.log(FF), unfairWSKStack.peekFirst() + Math.log(UF));
-			//System.out.println(WSKF);
-			fairWSKStack.addFirst(WSKF);
+			/*System.out.println("Emission: "+wuerfelEmissionFair.get((zahl-1)));
+			System.out.println("FF: " +fairWSKStack.get(fairWSKStack.size()-1) + Math.log(FF));
+			System.out.println("UF: " +unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UF));
+			*/
+			WSKF = Math.log(wuerfelEmissionFair.get((zahl-1))) + Math.max(fairWSKStack.get(fairWSKStack.size()-1) + Math.log(FF), unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UF));
+			//System.out.println("WSKF: "+WSKF);
+			fairWSKStack.add(WSKF);
 		//}
 		
 	}
 
 	//Bei dieser Methode gehen wir von einem Wurf mit einem unfairen Wuerfel aus 
-	private void doUnfair(int zahl) {	
+	public void doUnfair(int zahl) {	
 		/*
 		if (unfairWSKStack.isEmpty()) {
 			WSKU = q0Unfair * wuerfelEmissionUnfair.get((zahl-1));
@@ -287,25 +316,82 @@ public class Viterbi {
 		*/	
 			//Fälle betrachten: Emissionszahl des unfairen Wuerfels * maximum von vorangegangener WSK Unfair zu nochmal Unfair
 			//und vorangegangener WSK Fair zu diesmal unfair
-			WSKU = Math.log(wuerfelEmissionUnfair.get((zahl-1))) + Math.max(unfairWSKStack.peekFirst() + Math.log(UU), fairWSKStack.peekFirst() + Math.log(FU));
-			//System.out.println(WSKF);			
-			unfairWSKStack.addFirst(WSKU);
+		/*
+		System.out.println("Zahl: "+zahl);
+		System.out.println("EmissionUnfairZahl: "+ wuerfelEmissionUnfair.get((zahl-1)));
+		System.out.println("Emission: "+wuerfelEmissionUnfair.get((zahl-1)));
+		System.out.println("UU: " +unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UU));
+		System.out.println("FU: " +fairWSKStack.get(fairWSKStack.size()-2) + Math.log(FU));
+		*/
+		
+			WSKU = Math.log(wuerfelEmissionUnfair.get((zahl-1))) + Math.max(unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UU), fairWSKStack.get(fairWSKStack.size()-2) + Math.log(FU));
+			//System.out.println("WSKU: "+WSKU);			
+			unfairWSKStack.add(WSKU);
 		//}
 		
 	}
 	
-	private void compareStacks() {
-	
-	if (fairWSKStack.peekFirst() > unfairWSKStack.peekFirst())
+	public void compareStacks() {	
+	if (fairWSKStack.get(fairWSKStack.size()-1) > unfairWSKStack.get(unfairWSKStack.size()-1)){
 		System.out.print("F");
+	}
 	else
 		System.out.print("U");		
 	
 	}
 	
-	private void doVorwaerts() {
+	//*************************************************************************************************
+	//*************************************************************************************************
+
+	
+	public void doVorwaertsWSK() {
+		WSKF = wuerfelEmissionFair.get(zahlenfolge.get(0)) * q0Fair;
+		//System.out.println(WSKF);
+		fairVWTS.add(WSKF);
 		
+		WSKU = wuerfelEmissionUnfair.get(zahlenfolge.get(0)) * q0Unfair;
+		//System.out.println(WSKU);
+		unfairVWTS.add(WSKU);
+		compareStacksVWTS();
+		/*
+		double wert = (1/10.0) * ((1/20.0) * (19.0/20.0) + (1/12.0)*(1/20.0));
+		double wert2 = (1/6.0) * (((1/12.0) * (19.0/20.0)) + ((1/20.0)*(1/20.0)));
+		System.out.println("Wert unfair: " +wert);
+		System.out.println("Wert fair: " +wert2);
+		*/
+		for (int zahl : zahlenfolge.subList(1, zahlenfolge.size())) {  //skip first element in iteration) {
+			doFairVWTS(zahl);
+			doUnfairVWTS(zahl);
+			compareStacksVWTS();
+		}
 		
 	}
 
+	public void doFairVWTS(int zahl){
+		WSKF = wuerfelEmissionFair.get((zahl-1)) * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF)) *10;
+		//System.out.println("WSKFair: "+WSKF);
+		fairVWTS.add(WSKF);
+	}
+		
+	public void doUnfairVWTS(int zahl) { 
+		/*
+		System.out.println("Emission: " +wuerfelEmissionUnfair.get(zahl-1));
+		System.out.println("unfairVWTS: " +unfairVWTS.get(unfairVWTS.size()-1));
+		System.out.println("UU: " +UU);
+		System.out.println("fairVWTS: " +fairVWTS.get(fairVWTS.size()-2));
+		System.out.println("FU: " +FU);
+		*/
+		WSKU = wuerfelEmissionUnfair.get((zahl-1)) * ((unfairVWTS.get(unfairVWTS.size()-1) * UU) + (fairVWTS.get(fairVWTS.size()-2)* FU)) *10;
+		//System.out.println("WSKUnfair: " +WSKU);			
+		unfairVWTS.add(WSKU);
+	}
+		
+	public void compareStacksVWTS() {
+		if (fairVWTS.get(fairVWTS.size()-1) > unfairVWTS.get(unfairVWTS.size()-1)) {
+			System.out.print("F");
+		}
+		else
+			System.out.print("U");			
+	}
+	
 }
