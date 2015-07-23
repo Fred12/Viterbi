@@ -1,3 +1,14 @@
+/*
+ * Die Klasse Viterbi.java implementiert den Viterbi-, und den Vorwärts-Algorithmus, 
+ * und fragt zu Beginn dynamisch Übergangs-, Emissions-, und Zustandswahrscheinlichkeiten ab.
+ * 
+ * 
+ * 
+ * @author Marc Ludovici
+ * @course Bioinformatik
+ * @date   20.07.2015
+ */
+
 package hmm;
 
 import java.awt.List;
@@ -65,9 +76,9 @@ public class Viterbi {
 	public Viterbi() throws IOException, ParseException {		
 		begruessen();
 		readData();
-		chooseAlgorithm();
-	
+		chooseAlgorithm();	
 	}
+	
 	
 	public void begruessen() throws IOException, ParseException {
 		boolean weiter = true;
@@ -368,7 +379,7 @@ public class Viterbi {
 	}
 
 	public void doFairVWTS(int zahl){
-		WSKF = wuerfelEmissionFair.get((zahl-1)) * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF)) *10;
+		WSKF = wuerfelEmissionFair.get((zahl-1)) * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF))*5;
 		//System.out.println("WSKFair: "+WSKF);
 		fairVWTS.add(WSKF);
 	}
@@ -381,7 +392,7 @@ public class Viterbi {
 		System.out.println("fairVWTS: " +fairVWTS.get(fairVWTS.size()-2));
 		System.out.println("FU: " +FU);
 		*/
-		WSKU = wuerfelEmissionUnfair.get((zahl-1)) * ((unfairVWTS.get(unfairVWTS.size()-1) * UU) + (fairVWTS.get(fairVWTS.size()-2)* FU)) *10;
+		WSKU = wuerfelEmissionUnfair.get((zahl-1)) * ((unfairVWTS.get(unfairVWTS.size()-1) * UU) + (fairVWTS.get(fairVWTS.size()-2)* FU))*5;
 		//System.out.println("WSKUnfair: " +WSKU);			
 		unfairVWTS.add(WSKU);
 	}
