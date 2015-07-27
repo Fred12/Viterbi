@@ -169,7 +169,7 @@ public class Viterbi {
 		while(in.hasNextDouble()) {
 			val = in.nextDouble();
 			//System.out.println(val);
-			konfdatei.add(val);			
+			konfdatei.add(val);		// Werte in die ArrayList "konfdatei" einfügen	
 		}
 		in.close();
 		//NumberFormat format = NumberFormat.getInstance(Locale.GERMAN);
@@ -183,23 +183,21 @@ public class Viterbi {
 				konfdatei.add(d);
 			}
 			
-		}
-		for (Double element : konfdatei) {
-			System.out.println(element);
-		}
+		}		
 		*/
 		
+		//eingelesenen Werte an die Variablen übergeben für die späteren Berechnungen
 		q0Fair = konfdatei.get(0);
 		q0Unfair = konfdatei.get(1);
 		FF = konfdatei.get(2);		
 		FU = konfdatei.get(3);		
 		UU = konfdatei.get(4);
 		UF = konfdatei.get(5);
-		for (int t = 6 ; t <=11; t++) {
+		for (int t = 6 ; t <=11; t++) {   //EmissionsWSK für den fairen Würfel eintragen
 			wuerfelEmissionFair.add(konfdatei.get(t));	
 			//System.out.println(wuerfelEmissionFair.get(t-6));
 		}
-		for (int t = 12 ; t <=17; t++) {
+		for (int t = 12 ; t <=17; t++) {   //EmissionsWSK für den unfairen Würfel eintragen
 			wuerfelEmissionUnfair.add(konfdatei.get(t));
 			//System.out.println(wuerfelEmissionUnfair.get(t-12));
 		}
@@ -230,22 +228,22 @@ public class Viterbi {
 	BufferedReader br = new BufferedReader(fr);
 	
 	
-	while( (zeile = br.readLine()) != null ) {
+		while( (zeile = br.readLine()) != null ) {
+				
+			if (zeile.equals("")) {			  
+				  continue;
+			}	
 			
-		if (zeile.equals("")) {			  
-			  continue;
-		}	
-		
-		for (char c : zeile.toCharArray()) {
-	        if (Character.isDigit(c)) {
-	            zahlenwert = Character.getNumericValue(c);
-	            zahlenfolge.add(zahlenwert);	            
-	        }	
-	    }
- 
-	}br.close();
-	
+			for (char c : zeile.toCharArray()) {
+		        if (Character.isDigit(c)) {
+		            zahlenwert = Character.getNumericValue(c);
+		            zahlenfolge.add(zahlenwert);	            //den zahlenwert in die ArrayList "zahlenfolge" eintragen, um daraus die EmissionsWSK der Würfel zu holen
+		        }	
+		    } 
+		}
+	br.close();	
 	}
+	
 	
 	public void chooseAlgorithm() {
 		System.out.println("Welcher Algorithmus soll durchgeführt werden?");
@@ -267,8 +265,11 @@ public class Viterbi {
 	}
 	
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	public  void doViterbi() {
+		//Zuerst wird die WSK für den Übergang aus dem Initialzustand ausgerechnet 
 		//System.out.println("Zahl: "+zahlenfolge.get(0));
 		WSKF = Math.log(wuerfelEmissionFair.get(zahlenfolge.get(0)) * q0Fair);
 		//System.out.println(zahlenfolge.get(0));
@@ -278,10 +279,11 @@ public class Viterbi {
 		WSKU = Math.log(wuerfelEmissionUnfair.get(zahlenfolge.get(0)) * q0Unfair);
 		//System.out.println("Unfair: " +WSKU);
 		unfairWSKStack.add(WSKU);
-		compareStacks();
+		compareStacks();  //Vergleiche nun die Wahrscheinlichkeit beider Würfelfälle unfair/fair und wähle das Maximum, dann gib F oder U aus
 		
+		//Nun wird hier für alle folgenden Zahlen der normale Viterbi zuerst für den fairen, dann für den unfairen Würfel ausgerechnet
 		
-		for (int zahl : zahlenfolge.subList(1, zahlenfolge.size())) {  //skip first element in iteration
+		for (int zahl : zahlenfolge.subList(1, zahlenfolge.size())) {  //erstes Element (Initialzustand) übergehen, da schon ausgerechnet
 			//if (zahl == zahlenfolge.get(0)) continue;
 			//System.out.println("Zahl: "+ zahl);
 			doFair(zahl);
@@ -292,7 +294,7 @@ public class Viterbi {
 	}
 
 
-	//Bei dieser Methode gehen wir von einem Wurf mit einem fairen Wuerfel aus  
+	//Bei dieser Methode gehen wir von einem Wurf mit einem fairen Wuerfel aus  um den Viterbi zu berechnen
 	public void doFair(int zahl) {
 		/*
 		if (fairWSKStack.isEmpty()) {
@@ -315,7 +317,7 @@ public class Viterbi {
 		
 	}
 
-	//Bei dieser Methode gehen wir von einem Wurf mit einem unfairen Wuerfel aus 
+	//Bei dieser Methode gehen wir von einem Wurf mit einem fairen Wuerfel aus  um den Viterbi zu berechnen
 	public void doUnfair(int zahl) {	
 		/*
 		if (unfairWSKStack.isEmpty()) {
@@ -325,8 +327,11 @@ public class Viterbi {
 		
 		else {
 		*/	
-			//Fälle betrachten: Emissionszahl des unfairen Wuerfels * maximum von vorangegangener WSK Unfair zu nochmal Unfair
-			//und vorangegangener WSK Fair zu diesmal unfair
+			//Fälle betrachten: Emissionszahl des unfairen Wuerfels * maximum er vorangegangenen WSK Unfair zu Unfair
+			//und vorangegangener WSK Fair zu unfair. 
+			//Dabei jedoch beachten, dass aus dem fairWSKStack das vorletzte Element genommen wird für die Berechnung,
+			//da doFair() zuerst ausgerechnet wird, und daher der "neue" Wert schon eingetragen wird, man jedoch noch den
+			//Wert davor benötigt.
 		/*
 		System.out.println("Zahl: "+zahl);
 		System.out.println("EmissionUnfairZahl: "+ wuerfelEmissionUnfair.get((zahl-1)));
@@ -341,20 +346,19 @@ public class Viterbi {
 		//}
 		
 	}
-	
+	//Vergleiche die Viterbi WSK aus den vorherigen Berechnungen doFair() bzw. doUnfair() und wähle die Max. WSK der beiden aus,
+	//je nachdem ob dies der faire bzw. unfaire Würfel war, gib 'F' oder 'U' aus.
 	public void compareStacks() {	
 	if (fairWSKStack.get(fairWSKStack.size()-1) > unfairWSKStack.get(unfairWSKStack.size()-1)){
 		System.out.print("F");
 	}
 	else
 		System.out.print("U");		
-	
 	}
 	
 	//*************************************************************************************************
 	//*************************************************************************************************
-
-	
+	//Hier wird die Vorwärts-Wahrscheinlichkeit berechnet.
 	public void doVorwaertsWSK() {
 		WSKF = wuerfelEmissionFair.get(zahlenfolge.get(0)) * q0Fair;
 		//System.out.println(WSKF);
@@ -370,7 +374,7 @@ public class Viterbi {
 		System.out.println("Wert unfair: " +wert);
 		System.out.println("Wert fair: " +wert2);
 		*/
-		for (int zahl : zahlenfolge.subList(1, zahlenfolge.size())) {  //skip first element in iteration) {
+		for (int zahl : zahlenfolge.subList(1, zahlenfolge.size())) {  // Erstes Element übergehen, da Initialwert schon errechnet
 			doFairVWTS(zahl);
 			doUnfairVWTS(zahl);
 			compareStacksVWTS();
@@ -379,7 +383,7 @@ public class Viterbi {
 	}
 
 	public void doFairVWTS(int zahl){
-		WSKF = wuerfelEmissionFair.get((zahl-1)) * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF))*5;
+		WSKF = wuerfelEmissionFair.get((zahl-1)) * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF))*5; //5 = Multiplikationsfaktor um die WSK nicht zu klein zu machen
 		//System.out.println("WSKFair: "+WSKF);
 		fairVWTS.add(WSKF);
 	}
