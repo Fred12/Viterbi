@@ -173,6 +173,12 @@ public class Viterbi {
 		System.out.println("3. Zeile (EmissionsWSK fairer Wuerfel : WERT (Zahl1) <LZ> WERT( Zahl2) <LZ> ... usw");
 		System.out.println("4. Zeile analog zu 3. Zeile für den unfairen Wuerfel");
 		System.out.println("");
+		System.out.println("Beispiel: ");
+		System.out.println("0,5 0,5");
+		System.out.println("0,95 0,05 0,95 0,05");
+		System.out.println("0,1 0,1 0,1 0,1 0,1 0,5");
+		System.out.println("0,1 0,1 0,1 0,1 0,1 0,5\n");
+
 		System.out.println("Bitte geben Sie nun den Dateipfad der Konfigurationsdatei an:");
 		
 		String dateiname = scanner.next();
@@ -302,6 +308,8 @@ public class Viterbi {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	public  void doViterbi() {
+		System.out.println("");
+		System.out.println("Ausgabe:");
 		//Zuerst wird die WSK für den Übergang aus dem Initialzustand ausgerechnet 
 		//System.out.println("Zahl: "+zahlenfolge.get(0));		
 		WSKF = wLogFair[zahlenfolge.get(0) -1] + q0Fairlog;
@@ -393,6 +401,9 @@ public class Viterbi {
 	//*************************************************************************************************
 	//Hier wird die Vorwärts-Wahrscheinlichkeit berechnet.
 	public void doVorwaertsWSK() {
+		System.out.println("");
+		System.out.println("Ausgabe:");
+		
 		WSKF = wuerfelEmissionFair[zahlenfolge.get(0)-1] * q0Fair;
 		//System.out.println(WSKF);
 		fairVWTS.add(WSKF);
