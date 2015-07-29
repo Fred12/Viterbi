@@ -11,47 +11,55 @@
 
 package hmm;
 
-import java.awt.List;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.ParseException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.Scanner;
 
-public class Viterbi {
-	private Scanner scanner = new Scanner(System.in); 
+public class Viterbi {	
+	private Scanner scanner;
 	private double q0Fair;  //WSK, im Anfangszustand den fairen Wuerfel zu waehlen
+	private double q0Fairlog;
 	private double q0Unfair;  //WSK, im Anfangszustand den unfairen Wuerfel zu waehlen
+	private double q0Unfairlog;
 	
 	private double FF;   //WSK des Wechsels von fairem zu fairem Wuerfel
+	private double FFlog;
 	private double FU;	 //WSK des Wechsels von fairem zu unfairem Wuerfel
+	private double FUlog;
 	private double UU;	 //WSK des Wechsels von unfairem zu unfairem Wuerfel
+	private double UUlog;
 	private double UF;	 //WSK des Wechsels von unfairem zu fairem Wuerfel
+	private double UFlog;
 	
 	private double WSKU; //berechnete ÜbergangsWSK für unfair
 	private double WSKF; //berechnete ÜbergangsWSK für fair
 	
-	private ArrayList<Double> wuerfelEmissionFair = new ArrayList<Double>();
-	private ArrayList<Double> wuerfelEmissionUnfair = new ArrayList<Double>();
-	private ArrayList<Double> fairWSKStack = new ArrayList<Double>();
-	private ArrayList<Double> unfairWSKStack = new ArrayList<Double>();
-	private ArrayList<Integer> zahlenfolge = new ArrayList<Integer>();
-	ArrayList<Double> konfdatei = new ArrayList<Double>();
 	
-	private ArrayList<Double> fairVWTS = new ArrayList<Double>();
+	private Double[] wuerfelEmissionFair = new Double[6];
+	private Double[] wuerfelEmissionUnfair = new Double[6];
+	private Double[] wLogFair = new Double[6]; 		//Array der Logarithmus-Werte
+	private Double[] wLogUnfair = new Double[6]; 	//Array der Logarithmus-Werte
+	private ArrayList<Double> fairWSKStack = new ArrayList<Double>(); 	//ArrayList für Viterbi-Algorithmus
+	private ArrayList<Double> unfairWSKStack = new ArrayList<Double>();
+	private ArrayList<Integer> zahlenfolge = new ArrayList<Integer>();  //Liste der eingelesenen Zahlenfolgen
+	private ArrayList<Double> konfdatei = new ArrayList<Double>();		//eingelesene werte aus der Konfigurationsdatei
+	
+	private ArrayList<Double> fairVWTS = new ArrayList<Double>();  //ArrayList für die Vorwärts-Wahrscheinlichkeiten
 	private ArrayList<Double> unfairVWTS = new ArrayList<Double>();
 
-	private double e;
+	private double e;  //Hilfsvariable für die User-Eingaben
 	private String zeile = "";
 	private File source;
-	private int zahlenwert;
+	private int zahlenwert;  //Hilfsvariable für die aus der Datei geparsten integer-Zahlen
 	private boolean userInput = false;
 	//private ArrayList<String> dicevalues; 
 	private boolean abort = false;	
+	
 
 	
 	
@@ -61,15 +69,7 @@ public class Viterbi {
 	 
 	public static void main(String[] args) throws IOException, ParseException {		
 		new Viterbi();
-		/*ArrayList<Double> dd = new ArrayList<Double>();
-		dd.add(20.0);
-		dd.add(40.0);
-		dd.add(30.0);
-		dd.add(50.0);
-		System.out.println(dd);
-		System.out.println(dd.get(dd.size()-1));
-		System.out.println(dd.get(dd.size()-2));
-		*/
+		
 	}
 	
 	
@@ -77,76 +77,91 @@ public class Viterbi {
 		begruessen();
 		readData();
 		chooseAlgorithm();	
+		scanner.close();
+		
 	}
 	
 	
 	public void begruessen() throws IOException, ParseException {
+		
 		boolean weiter = true;
 		System.out.println("***Willkommen zu unserem Hidden Markov Model (Fair/Unfair)-Würfel Szenario Programm!***\n");
 		System.out.println("Sollen die Eingaben zu Zustands-, Übergangs-, und -Emissionswahrscheinlichkeit von Hand (1) oder \n");
 		System.out.println("von einer Textdatei (2) kommen? Bitte geben Sie 1, 2 oder 3 ein:");
 				
+		
 		while(weiter) {
 		System.out.println("(1) Direkteingabe (von Hand)");
 		System.out.println("(2) Textdatei");
-		System.out.println("(3) abbrechen");
-			
+		System.out.println("(3) abbrechen");		
+		
+		try {
+			scanner = new Scanner(System.in);
 		int eingabe = scanner.nextInt();
-			
-			
-		if (eingabe == 1) {
+						
+		if (eingabe==1) {
 			userInputHand();
 			weiter = false;
 		} 
-		else if (eingabe == 2) {
+		else if (eingabe==2) {
 			userInputText();
 			weiter=false;
 		}
-		else if (eingabe == 3) {
+		else  {
 			weiter = false;
 			System.out.println("Auf Wiedersehen!");
 			abort = true;
 			return;
-		}
-		else {			
-			System.out.println("Falsche Eingabe, bitte erneut eingeben");
-		}
-		}
+		}			
 		
+		}		
+		catch (Exception e) {System.out.println("Falsche Eingabe!");	}
+			
+		}
 	}
 	
 	public void userInputHand() {			
 		System.out.println("Bitte geben Sie die Übergangswahrscheinlichkeit (reelle Kommazahl, bzw. Double-Wert) an aus dem Anfangszustands den fairen Wuerfel auszuwählen: ");
 		q0Fair = scanner.nextDouble();
+		q0Fairlog = Math.log(q0Fair);
 		System.out.println("Analog dazu bitte die Wahrscheinlichkeit angeben, aus dem Anfangszustand den Unfairen Würfel zu wählen: ");
 		q0Unfair = scanner.nextDouble();
+		q0Unfairlog = Math.log(q0Unfair);
 		System.out.println("Geben Sie nun die WSK an, vom fairen Wuerfel beim fairen Wuerfel zu bleiben: ");
-		FF = scanner.nextDouble();		
+		FF = scanner.nextDouble();	
+		FFlog = Math.log(FF);
 		System.out.println("Geben Sie nun die WSK an, vom fairen Wuerfel zum unfairen Wuerfel zu wechseln: ");
 		FU = scanner.nextDouble();
+		FUlog = Math.log(FU);
 		System.out.println("Geben Sie nun die WSK an, vom unfairen Wuerfel beim unfairen Wuerfel zu bleiben");
 		UU = scanner.nextDouble();
+		UUlog = Math.log(UU);
 		System.out.println("Geben Sie nun die WSK an, vom unfairen Wuerfel zum fairen Wuerfel zu wechseln: ");
 		UF = scanner.nextDouble();
+		UFlog = Math.log(UF);
 		///////////////////////////////////////////////////////////
 		System.out.println("*************************************************************\n");
 		System.out.println("Geben Sie nun nacheinander die Emissionswahrscheinlichkeiten für die Zahlen 1-6 des FAIREN Wuerfels an: ");
 		for (int i = 1; i <= 6; i++) {
 		System.out.println("Zahl " +i+ "= ");		
 		e = scanner.nextDouble();		
-		wuerfelEmissionFair.add(e);
-		}
+		wuerfelEmissionFair[i-1] = e;	
+		wLogFair[i-1] = Math.log(e);
+		}		
+				
 		///////////////////////////////////////////////////////////
 		System.out.println("Geben Sie nun nacheinander die Emissionswahrscheinlichkeiten für die Zahlen 1-6 des UNFAIREN Wuerfels an: ");
 		for (int i = 1; i <= 6; i++) {
 		System.out.println("Zahl " +i+ "= ");
 		e = scanner.nextDouble();
-		wuerfelEmissionUnfair.add(e);		
-		}
+		wuerfelEmissionUnfair[i-1] = e;	
+		wLogUnfair[i-1] = Math.log(e);
+		}			
 		userInput = true;
 	}
 	
 	public void userInputText() throws IOException, ParseException {
+		
 		System.out.println("Bitte geben Sie ihre Konfigurationsdatei bezueglich der Anfangszustaende, der Uebergangswahrscheinlichkeiten");
 		System.out.println("und der Emissionswahrscheinlichkeiten fuer den fairen und Unfairen Wuerfel an!\n");		
 		System.out.println("Es gibt es nur 4 Zeilen, auf der ersten Zeile stehen die Anfangszustände, auf der zweiten die Übergangswahrscheinlichkeiten");
@@ -188,19 +203,29 @@ public class Viterbi {
 		
 		//eingelesenen Werte an die Variablen übergeben für die späteren Berechnungen
 		q0Fair = konfdatei.get(0);
+		
 		q0Unfair = konfdatei.get(1);
-		FF = konfdatei.get(2);		
-		FU = konfdatei.get(3);		
+		FF = konfdatei.get(2);	
+		FFlog = Math.log(FF);
+		FU = konfdatei.get(3);	
+		FUlog = Math.log(FU);
 		UU = konfdatei.get(4);
+		UUlog = Math.log(UU);
 		UF = konfdatei.get(5);
+		UFlog = Math.log(UF);
 		for (int t = 6 ; t <=11; t++) {   //EmissionsWSK für den fairen Würfel eintragen
-			wuerfelEmissionFair.add(konfdatei.get(t));	
+			wuerfelEmissionFair[t-6] = konfdatei.get(t);
+			wLogFair[t-6] = Math.log(konfdatei.get(t));
+		}
 			//System.out.println(wuerfelEmissionFair.get(t-6));
-		}
+				
+		
 		for (int t = 12 ; t <=17; t++) {   //EmissionsWSK für den unfairen Würfel eintragen
-			wuerfelEmissionUnfair.add(konfdatei.get(t));
+			wuerfelEmissionUnfair[t-12] = konfdatei.get(t);
+			wLogUnfair[t-12] = Math.log(konfdatei.get(t));
 			//System.out.println(wuerfelEmissionUnfair.get(t-12));
-		}
+		}		
+		
 		/*
 		for (double element : wuerfelEmissionFair) {
 			System.out.println(element);
@@ -208,7 +233,7 @@ public class Viterbi {
 		for (double element : wuerfelEmissionUnfair) {
 			System.out.println(element);
 		}
-		*/
+		*/		
 		userInput =true;
 	}
 	
@@ -219,8 +244,10 @@ public class Viterbi {
 			System.out.println("Es wurden keine User-Eingaben bezüglich der Würfelwahrscheinlichkeiten getaetigt!");
 			return;
 		}
+	
 	System.out.println("Nun muessen Sie die Datei zu dem Markov-String angeben!");
 	System.out.println("Bitte den Namen der Datei (falls im selben Programmverzeichnis), " + "\n" + "oder den absoluten Pfad zum Dateinamen eingeben (Pfad darf keine Leerzeichen enthalten) : ");
+	
 	String dateiname = scanner.next();
 	
 	source = new File(dateiname);
@@ -241,16 +268,19 @@ public class Viterbi {
 		        }	
 		    } 
 		}
-	br.close();	
+	br.close();		
 	}
 	
 	
 	public void chooseAlgorithm() {
+		if (abort ==true) {return;}
+		
 		System.out.println("Welcher Algorithmus soll durchgeführt werden?");
 		System.out.println("(1) : Viterbi");
 		System.out.println("(2) : Vorwaerts");
 		System.out.println("(sonst) : abbrechen");
 		
+		try {
 		int input = scanner.nextInt();
 		
 		if (input == 1) {
@@ -259,8 +289,11 @@ public class Viterbi {
 		else if (input == 2) {
 			doVorwaertsWSK();
 		}
-		else {
+		else {		
+			System.out.println("Auf Wiedersehen!");
 			return;
+		}	
+		} catch (Exception e) {System.out.println("Auf Wiedersehen!");
 		}
 	}
 	
@@ -270,13 +303,13 @@ public class Viterbi {
 
 	public  void doViterbi() {
 		//Zuerst wird die WSK für den Übergang aus dem Initialzustand ausgerechnet 
-		//System.out.println("Zahl: "+zahlenfolge.get(0));
-		WSKF = Math.log(wuerfelEmissionFair.get(zahlenfolge.get(0)) * q0Fair);
+		//System.out.println("Zahl: "+zahlenfolge.get(0));		
+		WSKF = wLogFair[zahlenfolge.get(0) -1] + q0Fairlog;
 		//System.out.println(zahlenfolge.get(0));
 		//System.out.println("Fair: " +WSKF);
 		fairWSKStack.add(WSKF);
 		
-		WSKU = Math.log(wuerfelEmissionUnfair.get(zahlenfolge.get(0)) * q0Unfair);
+		WSKU = wLogUnfair[zahlenfolge.get(0)-1] + q0Unfairlog;
 		//System.out.println("Unfair: " +WSKU);
 		unfairWSKStack.add(WSKU);
 		compareStacks();  //Vergleiche nun die Wahrscheinlichkeit beider Würfelfälle unfair/fair und wähle das Maximum, dann gib F oder U aus
@@ -310,7 +343,7 @@ public class Viterbi {
 			System.out.println("FF: " +fairWSKStack.get(fairWSKStack.size()-1) + Math.log(FF));
 			System.out.println("UF: " +unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UF));
 			*/
-			WSKF = Math.log(wuerfelEmissionFair.get((zahl-1))) + Math.max(fairWSKStack.get(fairWSKStack.size()-1) + Math.log(FF), unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UF));
+			WSKF = wLogFair[zahl-1] + Math.max(fairWSKStack.get(fairWSKStack.size()-1) + FFlog, unfairWSKStack.get(unfairWSKStack.size()-1) + UFlog);
 			//System.out.println("WSKF: "+WSKF);
 			fairWSKStack.add(WSKF);
 		//}
@@ -340,7 +373,7 @@ public class Viterbi {
 		System.out.println("FU: " +fairWSKStack.get(fairWSKStack.size()-2) + Math.log(FU));
 		*/
 		
-			WSKU = Math.log(wuerfelEmissionUnfair.get((zahl-1))) + Math.max(unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UU), fairWSKStack.get(fairWSKStack.size()-2) + Math.log(FU));
+			WSKU = wLogUnfair[(zahl-1)] + Math.max(unfairWSKStack.get(unfairWSKStack.size()-1) + UUlog, fairWSKStack.get(fairWSKStack.size()-2) + FUlog);
 			//System.out.println("WSKU: "+WSKU);			
 			unfairWSKStack.add(WSKU);
 		//}
@@ -360,11 +393,11 @@ public class Viterbi {
 	//*************************************************************************************************
 	//Hier wird die Vorwärts-Wahrscheinlichkeit berechnet.
 	public void doVorwaertsWSK() {
-		WSKF = wuerfelEmissionFair.get(zahlenfolge.get(0)) * q0Fair;
+		WSKF = wuerfelEmissionFair[zahlenfolge.get(0)-1] * q0Fair;
 		//System.out.println(WSKF);
 		fairVWTS.add(WSKF);
 		
-		WSKU = wuerfelEmissionUnfair.get(zahlenfolge.get(0)) * q0Unfair;
+		WSKU = wuerfelEmissionUnfair[zahlenfolge.get(0)-1] * q0Unfair;
 		//System.out.println(WSKU);
 		unfairVWTS.add(WSKU);
 		compareStacksVWTS();
@@ -383,7 +416,7 @@ public class Viterbi {
 	}
 
 	public void doFairVWTS(int zahl){
-		WSKF = wuerfelEmissionFair.get((zahl-1)) * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF))*5; //5 = Multiplikationsfaktor um die WSK nicht zu klein zu machen
+		WSKF = wuerfelEmissionFair[zahl-1] * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF))*5; //5 = Multiplikationsfaktor um die WSK nicht zu klein zu machen
 		//System.out.println("WSKFair: "+WSKF);
 		fairVWTS.add(WSKF);
 	}
@@ -396,7 +429,7 @@ public class Viterbi {
 		System.out.println("fairVWTS: " +fairVWTS.get(fairVWTS.size()-2));
 		System.out.println("FU: " +FU);
 		*/
-		WSKU = wuerfelEmissionUnfair.get((zahl-1)) * ((unfairVWTS.get(unfairVWTS.size()-1) * UU) + (fairVWTS.get(fairVWTS.size()-2)* FU))*5;
+		WSKU = wuerfelEmissionUnfair[zahl-1] * ((unfairVWTS.get(unfairVWTS.size()-1) * UU) + (fairVWTS.get(fairVWTS.size()-2)* FU))*5;
 		//System.out.println("WSKUnfair: " +WSKU);			
 		unfairVWTS.add(WSKU);
 	}
