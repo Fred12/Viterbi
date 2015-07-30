@@ -15,7 +15,6 @@ package hmm;
 
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -325,7 +324,9 @@ public class Viterbi_Vorw {
 		}
 		sbv.append("\n").append("Ausgabe:\n");		
 		//Zuerst wird die WSK für den Übergang aus dem Initialzustand ausgerechnet 
-		//System.out.println("Zahl: "+zahlenfolge.get(0));		
+		//System.out.println("Zahl: "+zahlenfolge.get(0));	
+		
+		
 		WSKF = wLogFair[zahlenfolge.get(0) -1] + q0Fairlog;
 		WSKFprevious = WSKF;
 		//System.out.println(zahlenfolge.get(0));
@@ -352,10 +353,11 @@ public class Viterbi_Vorw {
 			//System.out.println("Zahl: "+ zahl);	
 			//fairen Fall berechnen
 			//WSKF = wLogFair[zahl-1] + Math.max(fairWSKStack.get(fairWSKStack.size()-1) + FFlog, unfairWSKStack.get(unfairWSKStack.size()-1) + UFlog); 
+			WSKU = wLogUnfair[zahl-1] + Math.max(WSKUprevious + UUlog, WSKFprevious + FUlog);
 			WSKF = wLogFair[zahl-1] + Math.max(WSKFprevious + FFlog, WSKUprevious + UFlog);
 			//unfairen Fall berechnen
 			//WSKU = wLogUnfair[(zahl-1)] + Math.max(unfairWSKStack.get(unfairWSKStack.size()-1) + UUlog, fairWSKStack.get(fairWSKStack.size()-2) + FUlog); 
-			WSKU = wLogUnfair[(zahl-1)] + Math.max(WSKUprevious + UUlog, WSKFprevious + FUlog);
+			
 						
 			//fairWSKStack.add(WSKF);
 			//unfairWSKStack.add(WSKU);
