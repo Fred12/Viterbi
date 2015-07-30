@@ -1,23 +1,27 @@
 /*
- * Die Klasse Viterbi.java implementiert den Viterbi-, und den Vorwärts-Algorithmus, 
- * und fragt zu Beginn dynamisch Übergangs-, Emissions-, und Zustandswahrscheinlichkeiten ab.
+ * Die Klasse Viterbi_Vorw.java implementiert den Viterbi-, und den Vorwärts-Algorithmus, 
+ * und fragt zu Beginn dynamisch Übergangs-, Emissions-, und Zustandswahrscheinlichkeiten 
+ * für die Würfelereignisse ab.
  * 
  * 
  * 
  * @author Marc Ludovici
  * @course Bioinformatik
- * @date   20.07.2015
+ * @date   30.07.2015
+ * @version 0.2
  */
 
 package hmm;
 
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Scanner;
 
 public class Viterbi_Vorw {	
@@ -37,7 +41,9 @@ public class Viterbi_Vorw {
 	private double UFlog;
 
 	private double WSKU; //berechnete ÜbergangsWSK für unfair
+	private double WSKUprevious;
 	private double WSKF; //berechnete ÜbergangsWSK für fair
+	private double WSKFprevious;
 
 
 	private Double[] wuerfelEmissionFair = new Double[6];
@@ -59,6 +65,8 @@ public class Viterbi_Vorw {
 	private boolean userInput = false;
 	//private ArrayList<String> dicevalues; 
 	private boolean abort = false;		
+	private boolean reverse = false;
+	private boolean reverseVWTS = false;
 
 	//*********************************************************************************************************
 	//*********************************************************************************************************
@@ -202,7 +210,6 @@ public class Viterbi_Vorw {
 
 		//eingelesenen Werte an die Variablen übergeben für die späteren Berechnungen
 		q0Fair = konfdatei.get(0);
-
 		q0Unfair = konfdatei.get(1);
 		FF = konfdatei.get(2);	
 		FFlog = Math.log(FF);
@@ -276,7 +283,9 @@ public class Viterbi_Vorw {
 
 		System.out.println("Welcher Algorithmus soll durchgeführt werden?");
 		System.out.println("(1) : Viterbi");
-		System.out.println("(2) : Vorwaerts");
+		System.out.println("(2) : Viterbi mit Zahlenfolge rueckwaerts");
+		System.out.println("(3) : Vorwaerts-Algorithmus");
+		System.out.println("(4) : Vorwaerts-Algorithmus mit Zahlenfolge rueckwaerts");
 		System.out.println("(sonst) : abbrechen");
 
 		try {
@@ -286,6 +295,14 @@ public class Viterbi_Vorw {
 				doViterbi();
 			}
 			else if (input == 2) {
+				reverse = true;
+				doViterbi();
+			}
+			else if (input == 3) {
+				doVorwaertsWSK();				
+			}
+			else if (input == 4) {
+				reverseVWTS = true;
 				doVorwaertsWSK();
 			}
 			else {		
@@ -302,33 +319,67 @@ public class Viterbi_Vorw {
 	/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 	public void doViterbi() {
-		System.out.println("");
-		System.out.println("Ausgabe:");
+		StringBuffer sbv = new StringBuffer();
+		if (reverse == true) {
+			Collections.reverse(zahlenfolge);
+		}
+		sbv.append("\n").append("Ausgabe:\n");		
 		//Zuerst wird die WSK für den Übergang aus dem Initialzustand ausgerechnet 
 		//System.out.println("Zahl: "+zahlenfolge.get(0));		
 		WSKF = wLogFair[zahlenfolge.get(0) -1] + q0Fairlog;
+		WSKFprevious = WSKF;
 		//System.out.println(zahlenfolge.get(0));
 		//System.out.println("Fair: " +WSKF);
-		fairWSKStack.add(WSKF);
-
 		WSKU = wLogUnfair[zahlenfolge.get(0)-1] + q0Unfairlog;
+		WSKUprevious = WSKU;
 		//System.out.println("Unfair: " +WSKU);
-		unfairWSKStack.add(WSKU);
-		compareStacks();  //Vergleiche nun die Wahrscheinlichkeit beider Würfelfälle unfair/fair und wähle das Maximum, dann gib F oder U aus
+		
+		//fairWSKStack.add(WSKF);
+		//unfairWSKStack.add(WSKU);
+		
+		if(WSKF > WSKU) {
+			sbv.append("F");
+		}
+		else {
+			sbv.append("U");
+		}
+		//compareStacks();  //Vergleiche nun die Wahrscheinlichkeit beider Würfelfälle unfair/fair und wähle das Maximum, dann gib F oder U aus
 
 		//Nun wird hier für alle folgenden Zahlen der normale Viterbi zuerst für den fairen, dann für den unfairen Würfel ausgerechnet
 
 		for (int zahl : zahlenfolge.subList(1, zahlenfolge.size())) {  //erstes Element (Initialzustand) übergehen, da schon ausgerechnet
 			//if (zahl == zahlenfolge.get(0)) continue;
-			//System.out.println("Zahl: "+ zahl);
+			//System.out.println("Zahl: "+ zahl);	
+			//fairen Fall berechnen
+			//WSKF = wLogFair[zahl-1] + Math.max(fairWSKStack.get(fairWSKStack.size()-1) + FFlog, unfairWSKStack.get(unfairWSKStack.size()-1) + UFlog); 
+			WSKF = wLogFair[zahl-1] + Math.max(WSKFprevious + FFlog, WSKUprevious + UFlog);
+			//unfairen Fall berechnen
+			//WSKU = wLogUnfair[(zahl-1)] + Math.max(unfairWSKStack.get(unfairWSKStack.size()-1) + UUlog, fairWSKStack.get(fairWSKStack.size()-2) + FUlog); 
+			WSKU = wLogUnfair[(zahl-1)] + Math.max(WSKUprevious + UUlog, WSKFprevious + FUlog);
+						
+			//fairWSKStack.add(WSKF);
+			//unfairWSKStack.add(WSKU);
+			
+			if(WSKF > WSKU) {
+				sbv.append("F");
+			}
+			else {
+				sbv.append("U");
+			}
+			
+			WSKFprevious = WSKF;
+			WSKUprevious = WSKU;
+			/*
 			viterbiFair(zahl);
-			viterbiUnfair(zahl);
+			viterbiUnfair(zahl);			
 			compareStacks();
+			*/
 		}
+		System.out.println(sbv.toString());
 
 	}
-
-
+	
+	/*
 	//Bei dieser Methode gehen wir von einem Wurf mit einem fairen Wuerfel aus  um den Viterbi zu berechnen
 	public void viterbiFair(int zahl) {
 		/*
@@ -345,6 +396,7 @@ public class Viterbi_Vorw {
 			System.out.println("FF: " +fairWSKStack.get(fairWSKStack.size()-1) + Math.log(FF));
 			System.out.println("UF: " +unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UF));
 		 */
+	/*
 		WSKF = wLogFair[zahl-1] + Math.max(fairWSKStack.get(fairWSKStack.size()-1) + FFlog, unfairWSKStack.get(unfairWSKStack.size()-1) + UFlog);
 		//System.out.println("WSKF: "+WSKF);
 		fairWSKStack.add(WSKF);
@@ -362,6 +414,7 @@ public class Viterbi_Vorw {
 
 		else {
 		 */	
+	
 		//Fälle betrachten: Emissionszahl des unfairen Wuerfels * maximum er vorangegangenen WSK Unfair zu Unfair
 		//und vorangegangener WSK Fair zu unfair. 
 		//Dabei jedoch beachten, dass aus dem fairWSKStack das vorletzte Element genommen wird für die Berechnung,
@@ -374,13 +427,14 @@ public class Viterbi_Vorw {
 		System.out.println("UU: " +unfairWSKStack.get(unfairWSKStack.size()-1) + Math.log(UU));
 		System.out.println("FU: " +fairWSKStack.get(fairWSKStack.size()-2) + Math.log(FU));
 		 */
-
+/*
 		WSKU = wLogUnfair[(zahl-1)] + Math.max(unfairWSKStack.get(unfairWSKStack.size()-1) + UUlog, fairWSKStack.get(fairWSKStack.size()-2) + FUlog);
 		//System.out.println("WSKU: "+WSKU);			
 		unfairWSKStack.add(WSKU);
 		//}
 
 	}
+	
 	//Vergleiche die Viterbi WSK aus den vorherigen Berechnungen doFair() bzw. doUnfair() und wähle die Max. WSK der beiden aus,
 	//je nachdem ob dies der faire bzw. unfaire Würfel war, gib 'F' oder 'U' aus.
 	public void compareStacks() {		
@@ -390,23 +444,34 @@ public class Viterbi_Vorw {
 		else
 			System.out.print("U");		
 	}
-
+*/
 
 	//*************************************************************************************************
 	//*************************************************************************************************
 	//Hier wird die Vorwärts-Wahrscheinlichkeit berechnet.
 	public void doVorwaertsWSK() {
-		System.out.println("");
-		System.out.println("Ausgabe:");
+		if (reverseVWTS == true) {
+			Collections.reverse(zahlenfolge);
+		}
+		StringBuffer sb = new StringBuffer();
+		sb.append("\n").append("Ausgabe:\n");		
 
 		WSKF = wuerfelEmissionFair[zahlenfolge.get(0)-1] * q0Fair;
+		WSKFprevious = WSKF;		
 		//System.out.println(WSKF);
-		fairVWTS.add(WSKF);
-
 		WSKU = wuerfelEmissionUnfair[zahlenfolge.get(0)-1] * q0Unfair;
+		WSKUprevious = WSKU;
+		
+		//fairVWTS.add(WSKF);
+		//unfairVWTS.add(WSKU);
 		//System.out.println(WSKU);
-		unfairVWTS.add(WSKU);
-		compareStacksVWTS();
+		if (WSKF > WSKU) {
+			sb.append("F");
+		}
+		else {
+			sb.append("U");
+		}
+		
 		/*
 		double wert = (1/10.0) * ((1/20.0) * (19.0/20.0) + (1/12.0)*(1/20.0));
 		double wert2 = (1/6.0) * (((1/12.0) * (19.0/20.0)) + ((1/20.0)*(1/20.0)));
@@ -414,13 +479,29 @@ public class Viterbi_Vorw {
 		System.out.println("Wert fair: " +wert2);
 		 */
 		for (int zahl : zahlenfolge.subList(1, zahlenfolge.size())) {  // Erstes Element übergehen, da Initialwert schon errechnet
-			fairVWTS(zahl);
+			//WSKF = wuerfelEmissionFair[zahl-1] * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF))*5; //5 = Multiplikationsfaktor um die WSK nicht zu klein zu machen
+			//WSKU = wuerfelEmissionUnfair[zahl-1] * ((unfairVWTS.get(unfairVWTS.size()-1) * UU) + (fairVWTS.get(fairVWTS.size()-2)* FU))*5;
+			WSKF = (wuerfelEmissionFair[zahl-1] * ((WSKFprevious * FF) + (WSKUprevious * UF))) *5; //5 = Multiplikationsfaktor um die WSK nicht zu klein zu machen
+			WSKU = (wuerfelEmissionUnfair[zahl-1] * ((WSKUprevious * UU) + (WSKFprevious * FU))) *5;
+			//fairVWTS.add(WSKF);
+			//unfairVWTS.add(WSKU);
+			
+			if (WSKF > WSKU) {
+				sb.append("F");
+			}
+			else {
+				sb.append("U");
+			}
+			WSKFprevious = WSKF;
+			WSKUprevious = WSKU;
+			/*fairVWTS(zahl);
 			unfairVWTS(zahl);
-			compareStacksVWTS();
+			compareStacksVWTS();*/
 		}
-
+		System.out.println(sb.toString());
 	}
 
+	/*
 	public void fairVWTS(int zahl){
 		WSKF = wuerfelEmissionFair[zahl-1] * ((fairVWTS.get(fairVWTS.size()-1) * FF) + (unfairVWTS.get(unfairVWTS.size()-1) * UF))*5; //5 = Multiplikationsfaktor um die WSK nicht zu klein zu machen
 		//System.out.println("WSKFair: "+WSKF);
@@ -435,6 +516,7 @@ public class Viterbi_Vorw {
 		System.out.println("fairVWTS: " +fairVWTS.get(fairVWTS.size()-2));
 		System.out.println("FU: " +FU);
 		 */
+	/*
 		WSKU = wuerfelEmissionUnfair[zahl-1] * ((unfairVWTS.get(unfairVWTS.size()-1) * UU) + (fairVWTS.get(fairVWTS.size()-2)* FU))*5;
 		//System.out.println("WSKUnfair: " +WSKU);			
 		unfairVWTS.add(WSKU);
@@ -447,5 +529,5 @@ public class Viterbi_Vorw {
 		else
 			System.out.print("U");			
 	}
-
+	*/
 }
